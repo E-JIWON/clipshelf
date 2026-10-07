@@ -65,7 +65,7 @@ Requires Xcode 15+ (or the Command Line Tools with Swift 5.9).
 
 Two details worth knowing:
 
-- **Reveal on drag** uses the same trick as Yoink: a global `leftMouseDragged` monitor checks whether the drag pasteboard's `changeCount` moved. If it did, someone started dragging something, and the shelf slides out to catch it.
+- **Reveal on drag**: a global `leftMouseDragged` monitor checks whether the drag pasteboard's `changeCount` moved. If it did, someone started dragging something, and the shelf slides out to catch it.
 - **Idle cost is zero.** Hide/reveal is driven by `NSTrackingArea` on the panel itself, not by polling or global mouse‑moved monitoring. When your mouse is elsewhere, the process doesn't wake up.
 
 ## Development
@@ -76,12 +76,6 @@ swift test         # Store unit tests
 ./install.sh       # install to /Applications
 kill -USR1 $(pgrep -x ClipShelf)   # dump the panel to ~/Library/Caches/ClipShelf-snapshot.png
 ```
-
-## Why not just use …
-
-- **Yoink** — great, and the inspiration. Paid, and more than I needed.
-- **Universal Clipboard / Paste** — clipboard history, not a shelf. One item at a time, nothing to drag.
-- **Dropover** — closer, but ClipShelf is a fixed spot on the edge rather than a window that follows your drag.
 
 ## License
 

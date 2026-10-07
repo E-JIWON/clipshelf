@@ -58,7 +58,7 @@ final class ShelfPanel {
         NotificationCenter.default.addObserver(forName: NSWindow.didMoveNotification, object: panel, queue: .main) { [weak self] _ in
             self?.panelDidMove()
         }
-        // Yoink 방식: 드래그 페이스트보드가 바뀌면 어딘가에서 드래그가 시작된 것
+        // 드래그 페이스트보드의 changeCount가 바뀌면 어딘가에서 드래그가 시작된 것
         NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDragged) { [weak self] _ in
             self?.detectExternalDrag()
         }
