@@ -130,8 +130,6 @@ struct Draggable: NSViewRepresentable {
 struct Card: View {
     let url: URL
     @ObservedObject var store: Store
-    @State private var hover = false
-
     var body: some View {
         Group {
             if let s = Store.text(of: url) {
@@ -147,15 +145,15 @@ struct Card: View {
         .background(.background.opacity(0.7), in: RoundedRectangle(cornerRadius: 8))
         .overlay(Draggable(url: url) { delegate.preview(url, from: $0) })
         .overlay(alignment: .topTrailing) {
-            if hover {
-                HStack(spacing: 2) {
-                    Button { store.copy(url) } label: { Image(systemName: "doc.on.doc.fill") }
-                    Button { store.remove(url) } label: { Image(systemName: "xmark.circle.fill") }
-                }
-                .buttonStyle(.plain).foregroundStyle(.secondary).padding(3)
+            HStack(spacing: 4) {
+                Button { store.copy(url) } label: { Image(systemName: "doc.on.doc.fill") }
+                Button { store.remove(url) } label: { Image(systemName: "xmark") }
             }
+            .buttonStyle(.plain).font(.caption2.bold()).foregroundStyle(.white)
+            .padding(.horizontal, 6).padding(.vertical, 3)
+            .background(.black.opacity(0.55), in: Capsule())
+            .padding(4)
         }
-        .onHover { hover = $0 }
         .help("클릭: 미리보기 · 드래그: 꺼내기")
     }
 }
