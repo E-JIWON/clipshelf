@@ -16,6 +16,10 @@
   <img src="https://img.shields.io/badge/macOS-14%2B-lightgrey?style=flat-square" alt="macOS 14+">
 </p>
 
+<p align="center">
+  <img src="docs/demo.gif" width="720" alt="ClipShelf demo: drag an image into the edge shelf, drag a text card back out, shelf hides when the mouse leaves">
+</p>
+
 ---
 
 You take a screenshot, and now you need it in three places. You copy a snippet, then copy something else and lose it. ClipShelf is the in‑between spot: a small glass panel tucked into the screen edge that holds whatever you throw at it until you're done.

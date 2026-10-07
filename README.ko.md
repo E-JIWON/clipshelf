@@ -16,6 +16,10 @@
   <img src="https://img.shields.io/badge/macOS-14%2B-lightgrey?style=flat-square" alt="macOS 14+">
 </p>
 
+<p align="center">
+  <img src="docs/demo.gif" width="720" alt="클립 선반 데모: 이미지를 가장자리 선반에 끌어다 놓고, 텍스트 카드를 다시 꺼내고, 마우스가 떠나면 숨는 모습">
+</p>
+
 ---
 
 캡처를 떴는데 세 군데에 넣어야 한다. 뭔가 복사했는데 다른 걸 복사하다 날린다. 클립 선반은 그 "사이"에 두는 자리다. 화면 가장자리에 들어가 있는 작은 유리판에 던져두면, 끝날 때까지 거기 있다.
