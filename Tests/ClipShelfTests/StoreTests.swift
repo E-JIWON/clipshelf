@@ -1,13 +1,13 @@
 import AppKit
 import XCTest
-@testable import Shelf
+@testable import ClipShelf
 
 final class StoreTests: XCTestCase {
     private var dir: URL!
     private var store: Store!
 
     override func setUp() {
-        dir = FileManager.default.temporaryDirectory.appendingPathComponent("ShelfTests-\(UUID().uuidString)")
+        dir = FileManager.default.temporaryDirectory.appendingPathComponent("ClipShelfTests-\(UUID().uuidString)")
         store = Store(directory: dir)
     }
 
@@ -60,7 +60,7 @@ final class StoreTests: XCTestCase {
     }
 
     func testPasteboardRoundTrip() {
-        let pb = NSPasteboard(name: NSPasteboard.Name("ShelfTests-\(UUID().uuidString)"))
+        let pb = NSPasteboard(name: NSPasteboard.Name("ClipShelfTests-\(UUID().uuidString)"))
         defer { pb.releaseGlobally() }
 
         pb.clearContents()

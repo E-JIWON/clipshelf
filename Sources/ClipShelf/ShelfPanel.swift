@@ -229,7 +229,7 @@ final class ShelfPanel {
             guard let view = self?.panel.contentView,
                   let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
             view.cacheDisplay(in: view.bounds, to: rep)
-            let url = Store.defaultDirectory.deletingLastPathComponent().appendingPathComponent("Shelf-snapshot.png")
+            let url = Store.defaultDirectory.deletingLastPathComponent().appendingPathComponent("ClipShelf-snapshot.png")
             try? rep.representation(using: .png, properties: [:])?.write(to: url)
         }
         source.resume()

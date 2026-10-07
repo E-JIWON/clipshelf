@@ -2,11 +2,11 @@ import ServiceManagement
 import SwiftUI
 
 @main
-struct ShelfApp: App {
+struct ClipShelfApp: App {
     @NSApplicationDelegateAdaptor private var delegate: AppDelegate
 
     var body: some Scene {
-        MenuBarExtra("Shelf", systemImage: "tray.full") {
+        MenuBarExtra("ClipShelf", systemImage: "tray.full") {
             Button(L("클립보드에서 추가", "Add from Clipboard")) { delegate.shelf.store.addFromPasteboard() }
             Toggle(L("로그인 시 실행", "Launch at Login"), isOn: launchAtLogin)
             Divider()

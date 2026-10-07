@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 /// 선반 = 폴더 하나. 폴더 안의 파일이 곧 아이템. `.txt`는 텍스트, 나머지는 이미지/파일.
 final class Store: ObservableObject {
     static let defaultDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("Shelf", isDirectory: true)
+        .appendingPathComponent("ClipShelf", isDirectory: true)
 
     let directory: URL
     @Published private(set) var items: [URL] = []
