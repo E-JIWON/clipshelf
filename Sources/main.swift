@@ -1,4 +1,5 @@
 import AppKit
+import Quartz
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -91,39 +92,71 @@ final class Store: ObservableObject {
     }
 }
 
+// 카드 위에 얹는 투명 NSView. 클릭 → 미리보기, 끌기 → AppKit 드래그 세션.
+// (SwiftUI onDrag는 Finder/다른 앱이 받는 public.file-url을 안 실어줘서 꺼내기가 안 됨)
+final class DragHandle: NSView, NSDraggingSource {
+    var url: URL!
+    var onClick: ((NSView) -> Void)?
+    private var down = NSPoint.zero
+
+    override func mouseDown(with e: NSEvent) { down = e.locationInWindow }
+    override func mouseUp(with _: NSEvent) { onClick?(self) }
+    override func mouseDragged(with e: NSEvent) {
+        guard hypot(e.locationInWindow.x - down.x, e.locationInWindow.y - down.y) > 4 else { return }
+        let item = NSPasteboardItem()
+        if let s = Store.text(of: url) {
+            item.setString(s, forType: .string)
+        } else {
+            item.setString(url.absoluteString, forType: .fileURL)
+            if let t = UTType(filenameExtension: url.pathExtension), t.conforms(to: .image), let data = try? Data(contentsOf: url) {
+                item.setData(data, forType: NSPasteboard.PasteboardType(t.identifier))
+            }
+        }
+        let d = NSDraggingItem(pasteboardWriter: item)
+        d.setDraggingFrame(bounds, contents: NSImage(contentsOf: url) ?? NSWorkspace.shared.icon(forFile: url.path))
+        beginDraggingSession(with: [d], event: e, source: self)
+    }
+
+    func draggingSession(_: NSDraggingSession, sourceOperationMaskFor _: NSDraggingContext) -> NSDragOperation { .copy }
+}
+
+struct Draggable: NSViewRepresentable {
+    let url: URL
+    let onClick: (NSView) -> Void
+    func makeNSView(context _: Context) -> DragHandle { DragHandle() }
+    func updateNSView(_ v: DragHandle, context _: Context) { v.url = url; v.onClick = onClick }
+}
+
 struct Card: View {
     let url: URL
     @ObservedObject var store: Store
     @State private var hover = false
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Group {
-                if let s = Store.text(of: url) {
-                    Text(s).font(.caption).lineLimit(6)
-                        .frame(maxWidth: .infinity, alignment: .leading).padding(6)
-                } else if let img = NSImage(contentsOf: url) { // ponytail: 매 렌더마다 디스크 읽음, 느려지면 캐시
-                    Image(nsImage: img).resizable().scaledToFit()
-                } else {
-                    Label(url.lastPathComponent, systemImage: "doc").font(.caption).lineLimit(2).padding(6)
-                }
+        Group {
+            if let s = Store.text(of: url) {
+                Text(s).font(.caption).lineLimit(6)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(6)
+            } else if let img = NSImage(contentsOf: url) { // ponytail: 매 렌더마다 디스크 읽음, 느려지면 캐시
+                Image(nsImage: img).resizable().scaledToFit()
+            } else {
+                Label(url.lastPathComponent, systemImage: "doc").font(.caption).lineLimit(2).padding(6)
             }
-            .frame(maxWidth: .infinity)
-            .background(.background.opacity(0.7), in: RoundedRectangle(cornerRadius: 8))
-            .contentShape(Rectangle())
-            .onTapGesture { store.copy(url) }
-            .onDrag {
-                if let s = Store.text(of: url) { return NSItemProvider(object: s as NSString) }
-                return NSItemProvider(contentsOf: url) ?? NSItemProvider()
-            }
+        }
+        .frame(maxWidth: .infinity)
+        .background(.background.opacity(0.7), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(Draggable(url: url) { delegate.preview(url, from: $0) })
+        .overlay(alignment: .topTrailing) {
             if hover {
-                Button { store.remove(url) } label: {
-                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
-                }.buttonStyle(.plain).padding(3)
+                HStack(spacing: 2) {
+                    Button { store.copy(url) } label: { Image(systemName: "doc.on.doc.fill") }
+                    Button { store.remove(url) } label: { Image(systemName: "xmark.circle.fill") }
+                }
+                .buttonStyle(.plain).foregroundStyle(.secondary).padding(3)
             }
         }
         .onHover { hover = $0 }
-        .help("클릭: 복사 · 드래그: 꺼내기")
+        .help("클릭: 미리보기 · 드래그: 꺼내기")
     }
 }
 
@@ -163,6 +196,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let store = Store()
     var panel: NSPanel!
     var status: NSStatusItem!
+    var pinItem: NSMenuItem!
+    let previewPopover: NSPopover = { let p = NSPopover(); p.behavior = .transient; return p }()
+
+    var shown = false
+    var pinned = false
+    var dragging = false // 다른 앱에서 뭔가 드래그 중
+    var lastDrag = NSPasteboard(name: .drag).changeCount
+    var hideTicks = 0
+    var snapWork: DispatchWorkItem?
+
+    var screen: NSScreen { NSScreen.screens.first { $0.frame.intersects(panel.frame) } ?? NSScreen.main! }
+    var onLeft: Bool { panel.frame.midX < screen.frame.midX }
 
     func applicationDidFinishLaunching(_: Notification) {
         NSApp.setActivationPolicy(.accessory) // Dock 아이콘 없음
@@ -177,25 +222,109 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
         panel.contentView = NSHostingView(rootView: ShelfView(store: store))
-        let s = NSScreen.main?.visibleFrame ?? .zero
-        panel.setFrame(NSRect(x: s.minX + 8, y: s.midY - 210, width: 160, height: 420), display: true)
-        panel.orderFrontRegardless()
+        let vis = NSScreen.main?.visibleFrame ?? .zero
+        let saved = UserDefaults.standard.string(forKey: "frame").map(NSRectFromString)
+        panel.setFrame(saved ?? NSRect(x: vis.minX, y: vis.midY - 210, width: 160, height: 420), display: true)
+        show()
 
         status = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         status.button?.image = NSImage(systemSymbolName: "tray.full", accessibilityDescription: "Shelf")
         let menu = NSMenu()
-        for (title, sel) in [("선반 보이기/숨기기", #selector(toggle)), ("클립보드에서 추가", #selector(paste))] {
-            let item = NSMenuItem(title: title, action: sel, keyEquivalent: "")
-            item.target = self
-            menu.addItem(item)
-        }
+        pinItem = NSMenuItem(title: "항상 보이기", action: #selector(togglePin), keyEquivalent: "")
+        pinItem.target = self
+        menu.addItem(pinItem)
+        let pasteItem = NSMenuItem(title: "클립보드에서 추가", action: #selector(paste), keyEquivalent: "")
+        pasteItem.target = self
+        menu.addItem(pasteItem)
         menu.addItem(.separator())
         menu.addItem(withTitle: "종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         status.menu = menu
+
+        // 패널 옮기면 가까운 좌/우 가장자리에 붙이고 위치 기억
+        NotificationCenter.default.addObserver(forName: NSWindow.didMoveNotification, object: panel, queue: .main) { [weak self] _ in self?.scheduleSnap() }
+        // Yoink 방식: 드래그 페이스트보드가 바뀌면 어딘가에서 드래그가 시작된 것
+        NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDragged) { [weak self] _ in self?.detectDrag() }
+        // ponytail: 10Hz 폴링으로 마우스 위치 감시. 모니터 하나 기준.
+        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in self?.tick() }
     }
 
-    @objc func toggle() { panel.isVisible ? panel.orderOut(nil) : panel.orderFrontRegardless() }
+    @objc func togglePin() { pinned.toggle(); pinItem.state = pinned ? .on : .off; if pinned { show() } }
     @objc func paste() { store.addFromPasteboard() }
+
+    func preview(_ url: URL, from view: NSView) {
+        if previewPopover.isShown { previewPopover.close(); return }
+        guard let ql = QLPreviewView(frame: NSRect(x: 0, y: 0, width: 360, height: 360), style: .normal) else { return }
+        ql.previewItem = url as NSURL
+        ql.autostarts = true
+        let vc = NSViewController()
+        vc.view = ql
+        previewPopover.contentViewController = vc
+        previewPopover.show(relativeTo: view.bounds, of: view, preferredEdge: onLeft ? .maxX : .minX)
+    }
+
+    func scheduleSnap() {
+        snapWork?.cancel()
+        let w = DispatchWorkItem { [weak self] in self?.snap() }
+        snapWork = w
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: w)
+    }
+
+    func snap() {
+        guard NSEvent.pressedMouseButtons == 0 else { scheduleSnap(); return }
+        let vis = screen.visibleFrame
+        var f = panel.frame
+        f.origin.x = onLeft ? vis.minX : vis.maxX - f.width
+        f.origin.y = min(max(f.minY, vis.minY), vis.maxY - f.height)
+        panel.setFrame(f, display: true, animate: true)
+        UserDefaults.standard.set(NSStringFromRect(f), forKey: "frame")
+    }
+
+    func detectDrag() {
+        let c = NSPasteboard(name: .drag).changeCount
+        if c != lastDrag { lastDrag = c; dragging = true; show() }
+    }
+
+    func inHotZone(_ m: NSPoint) -> Bool {
+        let s = screen.frame, f = panel.frame
+        let atEdge = onLeft ? m.x <= s.minX + 1 : m.x >= s.maxX - 2
+        return atEdge && m.y >= f.minY && m.y <= f.maxY
+    }
+
+    func tick() {
+        let m = NSEvent.mouseLocation
+        if dragging, NSEvent.pressedMouseButtons == 0 { dragging = false }
+        if previewPopover.isShown {
+            let inPopover = previewPopover.contentViewController?.view.window?.frame.contains(m) ?? false
+            if NSEvent.pressedMouseButtons != 0, !inPopover, !panel.frame.contains(m) { previewPopover.close() }
+            return
+        }
+        if !shown {
+            if dragging || inHotZone(m) { show() }
+        } else if dragging || pinned || panel.frame.insetBy(dx: -24, dy: -24).contains(m) {
+            hideTicks = 0
+        } else {
+            hideTicks += 1
+            if hideTicks > 5 { hide() }
+        }
+    }
+
+    func show() {
+        hideTicks = 0
+        guard !shown else { return }
+        shown = true
+        panel.alphaValue = 0
+        panel.orderFrontRegardless()
+        panel.animator().alphaValue = 1
+    }
+
+    func hide() {
+        guard shown else { return }
+        shown = false
+        NSAnimationContext.runAnimationGroup({ _ in panel.animator().alphaValue = 0 }) { [weak self] in
+            guard let self, !self.shown else { return }
+            self.panel.orderOut(nil)
+        }
+    }
 }
 
 let app = NSApplication.shared
