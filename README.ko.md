@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/screenshot.png" width="140" alt="선반 패널">
+  <img src="docs/icon/app-icon.png" width="128" alt="선반 아이콘">
 </p>
 
 <h1 align="center">Shelf · 선반</h1>
@@ -19,6 +19,8 @@
 캡처를 떴는데 세 군데에 넣어야 한다. 뭔가 복사했는데 다른 걸 복사하다 날린다. 선반은 그 "사이"에 두는 자리다. 화면 가장자리에 들어가 있는 작은 유리판에 던져두면, 끝날 때까지 거기 있다.
 
 ## 뭘 하나
+
+<img src="docs/screenshot.png" width="140" align="right">
 
 - **아무거나 던지기** — 캡처 썸네일, 이미지, 드래그한 텍스트, 파일. 패널 클릭 후 ⌘V도 됨.
 - **다시 꺼내기** — Finder, 슬랙, 노션, 피그마 어디든 끌어다 놓기. 이미지는 진짜 파일로, 텍스트는 텍스트로.

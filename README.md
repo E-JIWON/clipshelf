@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/screenshot.png" width="140" alt="Shelf panel">
+  <img src="docs/icon/app-icon.png" width="128" alt="Shelf icon">
 </p>
 
 <h1 align="center">Shelf</h1>
@@ -19,6 +19,8 @@
 You take a screenshot, and now you need it in three places. You copy a snippet, then copy something else and lose it. Shelf is the in‑between spot: a small glass panel tucked into the screen edge that holds whatever you throw at it until you're done.
 
 ## What it does
+
+<img src="docs/screenshot.png" width="140" align="right">
 
 - **Drop anything** — screenshot thumbnails, images, text selections, files. Or click the panel and press ⌘V.
 - **Drag it back out** — into Finder, Slack, Notion, Figma, anywhere. Images go as real files, text as text.
