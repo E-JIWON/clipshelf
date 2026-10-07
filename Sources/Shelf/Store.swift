@@ -11,11 +11,16 @@ final class Store: ObservableObject {
     @Published var toast: String?
     @Published var pinned = false
 
+    private var watcher: DispatchSourceFileSystemObject?
+
     init(directory: URL = Store.defaultDirectory) {
         self.directory = directory
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         reload()
+        watchDirectory()
     }
+
+    deinit { watcher?.cancel() }
 
     static func text(of url: URL) -> String? {
         url.pathExtension == "txt" ? try? String(contentsOf: url, encoding: .utf8) : nil
@@ -100,6 +105,17 @@ final class Store: ObservableObject {
     private func reload() {
         let urls = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
         items = urls.sorted { $0.lastPathComponent > $1.lastPathComponent } // 파일명이 생성 시각이라 수정해도 순서가 안 바뀜
+    }
+
+    /// 폴더가 바깥에서 바뀌어도(다른 인스턴스, 스크립트) 목록을 맞춘다.
+    private func watchDirectory() {
+        let fd = open(directory.path, O_EVTONLY)
+        guard fd >= 0 else { return }
+        let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fd, eventMask: .write, queue: .main)
+        source.setEventHandler { [weak self] in self?.reload() }
+        source.setCancelHandler { close(fd) }
+        source.resume()
+        watcher = source
     }
 
     private func newURL(_ ext: String) -> URL {
