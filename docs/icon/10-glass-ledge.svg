@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a4150"/><stop offset="1" stop-color="#1b1f28"/></linearGradient>
+    <linearGradient id="photo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4fe3c1"/><stop offset="1" stop-color="#1fa98f"/></linearGradient>
+    <clipPath id="c"><rect x="100" y="100" width="824" height="824" rx="184"/></clipPath>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="url(#bg)"/>
+  <g clip-path="url(#c)">
+    <!-- big single photo card, slightly tilted, sitting on a glass ledge -->
+    <g transform="rotate(-5 512 480)">
+      <rect x="312" y="300" width="400" height="380" rx="40" fill="#fff"/>
+      <rect x="340" y="328" width="344" height="260" rx="28" fill="url(#photo)"/>
+      <circle cx="412" cy="400" r="30" fill="#fff" opacity=".9"/>
+      <path d="M340 574 L470 450 L560 540 L612 488 L684 568 L684 588 L340 588Z" fill="#fff" opacity=".4"/>
+      <rect x="340" y="616" width="190" height="22" rx="11" fill="#9aa0ad" opacity=".6"/>
+    </g>
+    <!-- small note peeking behind -->
+    <g transform="rotate(8 700 520)">
+      <rect x="640" y="400" width="150" height="190" rx="24" fill="#f6f2ea"/>
+      <rect x="666" y="440" width="98" height="12" rx="6" fill="#b9b2a6"/>
+      <rect x="666" y="470" width="74" height="12" rx="6" fill="#b9b2a6"/>
+    </g>
+    <!-- glass ledge -->
+    <ellipse cx="512" cy="700" rx="280" ry="14" fill="#000" opacity=".5"/>
+    <rect x="212" y="684" width="600" height="34" rx="17" fill="#fff" opacity=".18"/>
+    <rect x="212" y="684" width="600" height="4" rx="2" fill="#fff" opacity=".5"/>
+  </g>
+</svg>
