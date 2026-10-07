@@ -14,17 +14,13 @@ final class Store: ObservableObject {
 
     @Published var items: [URL] = []
     @Published var toast: String?
+    @Published var pinned = false
 
     init() { reload() }
 
     func reload() {
-        let urls = (try? FileManager.default.contentsOfDirectory(
-            at: Self.dir, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
-        items = urls.sorted { mtime($0) > mtime($1) }
-    }
-
-    private func mtime(_ u: URL) -> Date {
-        (try? u.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+        let urls = (try? FileManager.default.contentsOfDirectory(at: Self.dir, includingPropertiesForKeys: nil)) ?? []
+        items = urls.sorted { $0.lastPathComponent > $1.lastPathComponent } // 파일명 = 생성 시각. 수정해도 순서 안 바뀜
     }
 
     private func fresh(_ ext: String) -> URL {
@@ -45,6 +41,11 @@ final class Store: ObservableObject {
 
     func add(file: URL) {
         try? FileManager.default.copyItem(at: file, to: fresh(file.pathExtension.isEmpty ? "bin" : file.pathExtension))
+        reload()
+    }
+
+    func update(_ u: URL, text: String) {
+        try? text.write(to: u, atomically: true, encoding: .utf8)
         reload()
     }
 
@@ -170,10 +171,31 @@ struct Card: View {
         .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(.primary.opacity(0.08)))
         .overlay(Draggable(url: url, onClick: { delegate.preview(url, from: $0) }, onHover: { hover = $0 }))
-        .overlay(alignment: .topLeading) { if hover { dot("doc.on.doc.fill") { store.copy(url) } } }
-        .overlay(alignment: .topTrailing) { if hover { dot("xmark") { store.remove(url) } } }
+        .overlay(alignment: .bottomLeading) { if hover { dot("doc.on.doc.fill") { store.copy(url) } } }
+        .overlay(alignment: .bottomTrailing) { if hover { dot("xmark") { store.remove(url) } } }
         .animation(.easeOut(duration: 0.12), value: hover)
-        .help("클릭: 미리보기 · 드래그: 꺼내기")
+        .help("클릭: 미리보기/편집 · 드래그: 꺼내기")
+    }
+}
+
+struct TextEditView: View {
+    let url: URL
+    @ObservedObject var store: Store
+    @State private var text: String
+
+    init(url: URL, store: Store) {
+        self.url = url
+        self.store = store
+        _text = State(initialValue: Store.text(of: url) ?? "")
+    }
+
+    var body: some View {
+        TextEditor(text: $text)
+            .font(.system(size: 12)).lineSpacing(2)
+            .scrollContentBackground(.hidden)
+            .padding(8)
+            .frame(width: 300, height: 220)
+            .onChange(of: text) { _, new in store.update(url, text: new) }
     }
 }
 
@@ -213,6 +235,16 @@ struct ShelfView: View {
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
+        .overlay(alignment: .bottomTrailing) {
+            Button { store.pinned.toggle() } label: {
+                Image(systemName: store.pinned ? "pin.fill" : "pin")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(store.pinned ? Color.accentColor : Color.secondary.opacity(0.5))
+                    .frame(width: 22, height: 22)
+            }
+            .buttonStyle(.plain).padding(6)
+            .help(store.pinned ? "고정 해제" : "항상 보이기")
+        }
         .animation(.easeOut(duration: 0.2), value: store.toast)
         .animation(.easeOut(duration: 0.15), value: targeted)
         .onDrop(of: [.fileURL, .image, .text], isTargeted: $targeted) { store.add(providers: $0) }
@@ -226,13 +258,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let store = Store()
     var panel: NSPanel!
     var status: NSStatusItem!
-    var pinItem: NSMenuItem!
     let previewPopover: NSPopover = { let p = NSPopover(); p.behavior = .transient; return p }()
 
     static let peek: CGFloat = 8 // 숨었을 때 삐져나오는 폭
     var home = NSRect.zero // 펼쳐졌을 때 자리 (가장자리에 스냅된 상태)
     var shown = true
-    var pinned = false
     var moving = false // 코드로 setFrame 중 (didMove 무시)
     var dragging = false // 다른 앱에서 뭔가 드래그 중
     var lastDrag = NSPasteboard(name: .drag).changeCount
@@ -264,9 +294,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         status = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         status.button?.image = NSImage(systemSymbolName: "tray.full", accessibilityDescription: "Shelf")
         let menu = NSMenu()
-        pinItem = NSMenuItem(title: "항상 보이기", action: #selector(togglePin), keyEquivalent: "")
-        pinItem.target = self
-        menu.addItem(pinItem)
         let pasteItem = NSMenuItem(title: "클립보드에서 추가", action: #selector(paste), keyEquivalent: "")
         pasteItem.target = self
         menu.addItem(pasteItem)
@@ -283,7 +310,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDragged) { [weak self] _ in self?.detectDrag() }
         // 선반 클릭해서 포커스 준 뒤 Cmd+V → 클립보드 내용 추가
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in
-            guard e.modifierFlags.contains(.command), e.charactersIgnoringModifiers == "v" else { return e }
+            guard NSApp.keyWindow === self?.panel, e.modifierFlags.contains(.command), e.charactersIgnoringModifiers == "v" else { return e }
             self?.store.addFromPasteboard()
             return nil
         }
@@ -291,11 +318,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in self?.tick() }
     }
 
-    @objc func togglePin() { pinned.toggle(); pinItem.state = pinned ? .on : .off; if pinned { show() } }
     @objc func paste() { store.addFromPasteboard() }
 
     func preview(_ url: URL, from view: NSView) {
         if previewPopover.isShown { previewPopover.close(); return }
+        if Store.text(of: url) != nil { // 텍스트는 미리보기 대신 바로 편집
+            previewPopover.contentViewController = NSHostingController(rootView: TextEditView(url: url, store: store))
+            previewPopover.show(relativeTo: view.bounds, of: view, preferredEdge: onLeft ? .maxX : .minX)
+            previewPopover.contentViewController?.view.window?.makeKey()
+            return
+        }
         guard let ql = QLPreviewView(frame: NSRect(x: 0, y: 0, width: 360, height: 360), style: .normal) else { return }
         ql.previewItem = url as NSURL
         ql.autostarts = true
@@ -346,7 +378,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !shown {
             // 삐져나온 탭 근처(위아래 40px 여유)에 마우스가 오면 펼침
             if dragging || panel.frame.insetBy(dx: -4, dy: -40).contains(m) { show() }
-        } else if dragging || pinned || panel.frame.insetBy(dx: -24, dy: -24).contains(m) {
+        } else if dragging || store.pinned || panel.frame.insetBy(dx: -24, dy: -24).contains(m) {
             hideTicks = 0
         } else {
             hideTicks += 1
