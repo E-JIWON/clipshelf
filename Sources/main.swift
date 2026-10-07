@@ -238,12 +238,13 @@ struct ShelfView: View {
         .overlay(alignment: .bottomTrailing) {
             Button { store.pinned.toggle() } label: {
                 Image(systemName: store.pinned ? "pin.fill" : "pin")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(store.pinned ? Color.accentColor : Color.secondary.opacity(0.5))
-                    .frame(width: 22, height: 22)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(store.pinned ? Color.white : Color.secondary)
+                    .frame(width: 24, height: 24)
+                    .background(store.pinned ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.primary.opacity(0.08)), in: Circle())
             }
-            .buttonStyle(.plain).padding(6)
-            .help(store.pinned ? "고정 해제" : "항상 보이기")
+            .buttonStyle(.plain).padding(7)
+            .help(store.pinned ? "고정 해제" : "고정: 위치 잠금 + 항상 열림")
         }
         .animation(.easeOut(duration: 0.2), value: store.toast)
         .animation(.easeOut(duration: 0.15), value: targeted)
@@ -369,6 +370,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func tick() {
         let m = NSEvent.mouseLocation
+        panel.isMovableByWindowBackground = !store.pinned // 고정 = 위치 잠금
+        if store.pinned { show() }
         if dragging, NSEvent.pressedMouseButtons == 0 { dragging = false }
         if previewPopover.isShown {
             let inPopover = previewPopover.contentViewController?.view.window?.frame.contains(m) ?? false
