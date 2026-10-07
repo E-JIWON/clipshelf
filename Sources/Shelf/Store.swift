@@ -97,7 +97,7 @@ final class Store: ObservableObject {
         } else {
             pasteboard.writeObjects([url as NSURL])
         }
-        showToast("복사됨")
+        showToast(L("복사됨", "Copied"))
     }
 
     // MARK: - Private

@@ -27,7 +27,7 @@ struct ShelfView: View {
         if store.items.isEmpty {
             VStack(spacing: 8) {
                 Image(systemName: "tray").font(.system(size: 22, weight: .light))
-                Text("끌어다 놓기\n또는 ⌘V").font(.system(size: 11)).multilineTextAlignment(.center)
+                Text(L("끌어다 놓기\n또는 ⌘V", "Drop here\nor ⌘V")).font(.system(size: 11)).multilineTextAlignment(.center)
             }
             .foregroundStyle(.tertiary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -61,6 +61,6 @@ struct ShelfView: View {
                 .background(store.pinned ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.primary.opacity(0.08)), in: Circle())
         }
         .buttonStyle(.plain).padding(7)
-        .help(store.pinned ? "고정 해제" : "고정: 위치 잠금 + 항상 열림")
+        .help(store.pinned ? L("고정 해제", "Unpin") : L("고정: 위치 잠금 + 항상 열림", "Pin: lock position, stay open"))
     }
 }

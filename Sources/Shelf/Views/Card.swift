@@ -15,7 +15,7 @@ struct Card: View {
             .overlay(alignment: .bottomLeading) { if hovering { actionButton("doc.on.doc.fill") { store.copy(url) } } }
             .overlay(alignment: .bottomTrailing) { if hovering { actionButton("xmark") { store.remove(url) } } }
             .animation(.easeOut(duration: 0.12), value: hovering)
-            .help("클릭: 미리보기/편집 · 드래그: 꺼내기")
+            .help(L("클릭: 미리보기/편집 · 드래그: 꺼내기", "Click: preview/edit · Drag: take out"))
     }
 
     @ViewBuilder
