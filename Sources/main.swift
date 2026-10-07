@@ -95,13 +95,20 @@ final class Store: ObservableObject {
     }
 }
 
-// 카드 위에 얹는 투명 NSView. 클릭 → 미리보기, 끌기 → AppKit 드래그 세션.
+// 카드 위에 얹는 투명 NSView. 클릭 → 미리보기, 끌기 → AppKit 드래그 세션, 호버 감지.
 // (SwiftUI onDrag는 Finder/다른 앱이 받는 public.file-url을 안 실어줘서 꺼내기가 안 됨)
 final class DragHandle: NSView, NSDraggingSource {
     var url: URL!
     var onClick: ((NSView) -> Void)?
+    var onHover: ((Bool) -> Void)?
     private var down = NSPoint.zero
 
+    override func updateTrackingAreas() {
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
+    }
+    override func mouseEntered(with _: NSEvent) { onHover?(true) }
+    override func mouseExited(with _: NSEvent) { onHover?(false) }
     override func mouseDown(with e: NSEvent) { down = e.locationInWindow }
     override func mouseUp(with _: NSEvent) { onClick?(self) }
     override func mouseDragged(with e: NSEvent) {
@@ -126,37 +133,46 @@ final class DragHandle: NSView, NSDraggingSource {
 struct Draggable: NSViewRepresentable {
     let url: URL
     let onClick: (NSView) -> Void
+    let onHover: (Bool) -> Void
     func makeNSView(context _: Context) -> DragHandle { DragHandle() }
-    func updateNSView(_ v: DragHandle, context _: Context) { v.url = url; v.onClick = onClick }
+    func updateNSView(_ v: DragHandle, context _: Context) { v.url = url; v.onClick = onClick; v.onHover = onHover }
 }
 
 struct Card: View {
     let url: URL
     @ObservedObject var store: Store
+    @State private var hover = false
 
-    func pill(_ icon: String, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) { Image(systemName: icon) }
-            .buttonStyle(.plain).font(.caption2.bold()).foregroundStyle(.white)
-            .frame(width: 22, height: 18)
-            .background(.black.opacity(0.55), in: Capsule())
-            .padding(4)
+    func dot(_ icon: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon).font(.system(size: 9, weight: .bold)).foregroundStyle(.white)
+                .frame(width: 20, height: 20)
+                .background(.black.opacity(0.55), in: Circle())
+        }
+        .buttonStyle(.plain).padding(5)
     }
+
     var body: some View {
         Group {
             if let s = Store.text(of: url) {
-                Text(s).font(.caption).lineLimit(6)
-                    .frame(maxWidth: .infinity, alignment: .leading).padding(6)
+                Text(s).font(.system(size: 11)).lineLimit(5).lineSpacing(2)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(9)
+                    .background(.primary.opacity(0.06))
             } else if let img = NSImage(contentsOf: url) { // ponytail: 매 렌더마다 디스크 읽음, 느려지면 캐시
                 Image(nsImage: img).resizable().scaledToFit()
             } else {
-                Label(url.lastPathComponent, systemImage: "doc").font(.caption).lineLimit(2).padding(6)
+                Label(url.lastPathComponent, systemImage: "doc.fill").font(.system(size: 11)).lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(9)
+                    .background(.primary.opacity(0.06))
             }
         }
         .frame(maxWidth: .infinity)
-        .background(.background.opacity(0.7), in: RoundedRectangle(cornerRadius: 8))
-        .overlay(Draggable(url: url) { delegate.preview(url, from: $0) })
-        .overlay(alignment: .topLeading) { pill("doc.on.doc.fill") { store.copy(url) } }
-        .overlay(alignment: .topTrailing) { pill("xmark") { store.remove(url) } }
+        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(.primary.opacity(0.08)))
+        .overlay(Draggable(url: url, onClick: { delegate.preview(url, from: $0) }, onHover: { hover = $0 }))
+        .overlay(alignment: .topLeading) { if hover { dot("doc.on.doc.fill") { store.copy(url) } } }
+        .overlay(alignment: .topTrailing) { if hover { dot("xmark") { store.remove(url) } } }
+        .animation(.easeOut(duration: 0.12), value: hover)
         .help("클릭: 미리보기 · 드래그: 꺼내기")
     }
 }
@@ -164,41 +180,41 @@ struct Card: View {
 struct ShelfView: View {
     @ObservedObject var store: Store
     @State private var targeted = false
+    let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
 
     var body: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Text("선반").font(.caption.bold()).foregroundStyle(.secondary)
-                Spacer()
-                Button { store.addFromPasteboard() } label: { Image(systemName: "doc.on.clipboard") }
-                    .buttonStyle(.plain).help("클립보드에서 추가")
-            }
+        Group {
             if store.items.isEmpty {
-                Spacer()
-                Text("여기로\n끌어다 놓기").font(.caption).foregroundStyle(.tertiary).multilineTextAlignment(.center)
-                Spacer()
+                VStack(spacing: 8) {
+                    Image(systemName: "tray").font(.system(size: 22, weight: .light))
+                    Text("끌어다 놓기\n또는 ⌘V").font(.system(size: 11)).multilineTextAlignment(.center)
+                }
+                .foregroundStyle(.tertiary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                ScrollView {
-                    VStack(spacing: 8) {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 6) {
                         ForEach(store.items, id: \.self) { Card(url: $0, store: store) }
                     }
+                    .padding(8)
                 }
             }
         }
-        .padding(10)
         .frame(width: 160, height: 420)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(targeted ? Color.accentColor : .clear, lineWidth: 2))
+        .background(.thinMaterial, in: shape)
+        .overlay(shape.fill(Color.accentColor.opacity(targeted ? 0.1 : 0)))
+        .overlay(shape.strokeBorder(targeted ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.1), lineWidth: 1))
         .overlay(alignment: .bottom) {
             if let t = store.toast {
-                Text(t).font(.caption.bold()).foregroundStyle(.white)
+                Text(t).font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
                     .padding(.horizontal, 10).padding(.vertical, 5)
                     .background(.black.opacity(0.75), in: Capsule())
-                    .padding(.bottom, 14)
+                    .padding(.bottom, 12)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
         .animation(.easeOut(duration: 0.2), value: store.toast)
+        .animation(.easeOut(duration: 0.15), value: targeted)
         .onDrop(of: [.fileURL, .image, .text], isTargeted: $targeted) { store.add(providers: $0) }
     }
 }
