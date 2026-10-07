@@ -4,5 +4,8 @@ import PackageDescription
 let package = Package(
     name: "Shelf",
     platforms: [.macOS(.v14)],
-    targets: [.executableTarget(name: "Shelf", path: "Sources")]
+    targets: [
+        .executableTarget(name: "Shelf", path: "Sources/Shelf"),
+        .testTarget(name: "ShelfTests", dependencies: ["Shelf"], path: "Tests/ShelfTests"),
+    ]
 )
