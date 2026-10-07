@@ -13,6 +13,7 @@ final class Store: ObservableObject {
     }()
 
     @Published var items: [URL] = []
+    @Published var toast: String?
 
     init() { reload() }
 
@@ -89,6 +90,8 @@ final class Store: ObservableObject {
         let pb = NSPasteboard.general
         pb.clearContents()
         if let s = Self.text(of: u) { pb.setString(s, forType: .string) } else { pb.writeObjects([u as NSURL]) }
+        toast = "복사됨"
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in self?.toast = nil }
     }
 }
 
@@ -130,6 +133,14 @@ struct Draggable: NSViewRepresentable {
 struct Card: View {
     let url: URL
     @ObservedObject var store: Store
+
+    func pill(_ icon: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) { Image(systemName: icon) }
+            .buttonStyle(.plain).font(.caption2.bold()).foregroundStyle(.white)
+            .frame(width: 22, height: 18)
+            .background(.black.opacity(0.55), in: Capsule())
+            .padding(4)
+    }
     var body: some View {
         Group {
             if let s = Store.text(of: url) {
@@ -144,16 +155,8 @@ struct Card: View {
         .frame(maxWidth: .infinity)
         .background(.background.opacity(0.7), in: RoundedRectangle(cornerRadius: 8))
         .overlay(Draggable(url: url) { delegate.preview(url, from: $0) })
-        .overlay(alignment: .topTrailing) {
-            HStack(spacing: 4) {
-                Button { store.copy(url) } label: { Image(systemName: "doc.on.doc.fill") }
-                Button { store.remove(url) } label: { Image(systemName: "xmark") }
-            }
-            .buttonStyle(.plain).font(.caption2.bold()).foregroundStyle(.white)
-            .padding(.horizontal, 6).padding(.vertical, 3)
-            .background(.black.opacity(0.55), in: Capsule())
-            .padding(4)
-        }
+        .overlay(alignment: .topLeading) { pill("doc.on.doc.fill") { store.copy(url) } }
+        .overlay(alignment: .topTrailing) { pill("xmark") { store.remove(url) } }
         .help("클릭: 미리보기 · 드래그: 꺼내기")
     }
 }
@@ -186,6 +189,16 @@ struct ShelfView: View {
         .frame(width: 160, height: 420)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(targeted ? Color.accentColor : .clear, lineWidth: 2))
+        .overlay(alignment: .bottom) {
+            if let t = store.toast {
+                Text(t).font(.caption.bold()).foregroundStyle(.white)
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(.black.opacity(0.75), in: Capsule())
+                    .padding(.bottom, 14)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: store.toast)
         .onDrop(of: [.fileURL, .image, .text], isTargeted: $targeted) { store.add(providers: $0) }
     }
 }
