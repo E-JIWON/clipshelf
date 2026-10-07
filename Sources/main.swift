@@ -190,6 +190,9 @@ struct ShelfView: View {
     }
 }
 
+// 앱을 활성화하지 않고도 키 입력(Cmd+V)을 받을 수 있는 패널
+final class KeyPanel: NSPanel { override var canBecomeKey: Bool { true } }
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let store = Store()
     var panel: NSPanel!
@@ -210,7 +213,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_: Notification) {
         NSApp.setActivationPolicy(.accessory) // Dock 아이콘 없음
 
-        panel = NSPanel(contentRect: .zero, styleMask: [.nonactivatingPanel, .borderless], backing: .buffered, defer: false)
+        panel = KeyPanel(contentRect: .zero, styleMask: [.nonactivatingPanel, .borderless], backing: .buffered, defer: false)
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isOpaque = false
@@ -242,6 +245,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(forName: NSWindow.didMoveNotification, object: panel, queue: .main) { [weak self] _ in self?.scheduleSnap() }
         // Yoink 방식: 드래그 페이스트보드가 바뀌면 어딘가에서 드래그가 시작된 것
         NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDragged) { [weak self] _ in self?.detectDrag() }
+        // 선반 클릭해서 포커스 준 뒤 Cmd+V → 클립보드 내용 추가
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in
+            guard e.modifierFlags.contains(.command), e.charactersIgnoringModifiers == "v" else { return e }
+            self?.store.addFromPasteboard()
+            return nil
+        }
         // ponytail: 10Hz 폴링으로 마우스 위치 감시. 모니터 하나 기준.
         Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in self?.tick() }
     }
