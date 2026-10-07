@@ -200,15 +200,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var pinItem: NSMenuItem!
     let previewPopover: NSPopover = { let p = NSPopover(); p.behavior = .transient; return p }()
 
-    var shown = false
+    static let peek: CGFloat = 8 // 숨었을 때 삐져나오는 폭
+    var home = NSRect.zero // 펼쳐졌을 때 자리 (가장자리에 스냅된 상태)
+    var shown = true
     var pinned = false
+    var moving = false // 코드로 setFrame 중 (didMove 무시)
     var dragging = false // 다른 앱에서 뭔가 드래그 중
     var lastDrag = NSPasteboard(name: .drag).changeCount
     var hideTicks = 0
     var snapWork: DispatchWorkItem?
 
     var screen: NSScreen { NSScreen.screens.first { $0.frame.intersects(panel.frame) } ?? NSScreen.main! }
-    var onLeft: Bool { panel.frame.midX < screen.frame.midX }
+    var onLeft: Bool { home.midX < screen.frame.midX }
 
     func applicationDidFinishLaunching(_: Notification) {
         NSApp.setActivationPolicy(.accessory) // Dock 아이콘 없음
@@ -224,9 +227,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.isReleasedWhenClosed = false
         panel.contentView = NSHostingView(rootView: ShelfView(store: store))
         let vis = NSScreen.main?.visibleFrame ?? .zero
-        let saved = UserDefaults.standard.string(forKey: "frame").map(NSRectFromString)
-        panel.setFrame(saved ?? NSRect(x: vis.minX, y: vis.midY - 210, width: 160, height: 420), display: true)
-        show()
+        home = UserDefaults.standard.string(forKey: "frame").map(NSRectFromString)
+            ?? NSRect(x: vis.minX, y: vis.midY - 210, width: 160, height: 420)
+        move(to: home, animate: false)
+        panel.orderFrontRegardless()
 
         status = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         status.button?.image = NSImage(systemSymbolName: "tray.full", accessibilityDescription: "Shelf")
@@ -242,7 +246,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         status.menu = menu
 
         // 패널 옮기면 가까운 좌/우 가장자리에 붙이고 위치 기억
-        NotificationCenter.default.addObserver(forName: NSWindow.didMoveNotification, object: panel, queue: .main) { [weak self] _ in self?.scheduleSnap() }
+        NotificationCenter.default.addObserver(forName: NSWindow.didMoveNotification, object: panel, queue: .main) { [weak self] _ in
+            guard let self, !self.moving else { return }
+            self.scheduleSnap()
+        }
         // Yoink 방식: 드래그 페이스트보드가 바뀌면 어딘가에서 드래그가 시작된 것
         NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDragged) { [weak self] _ in self?.detectDrag() }
         // 선반 클릭해서 포커스 준 뒤 Cmd+V → 클립보드 내용 추가
@@ -251,7 +258,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.store.addFromPasteboard()
             return nil
         }
-        // ponytail: 10Hz 폴링으로 마우스 위치 감시. 모니터 하나 기준.
+        // ponytail: 10Hz 폴링으로 마우스 위치 감시
         Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in self?.tick() }
     }
 
@@ -269,6 +276,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         previewPopover.show(relativeTo: view.bounds, of: view, preferredEdge: onLeft ? .maxX : .minX)
     }
 
+    func move(to f: NSRect, animate: Bool) {
+        moving = true
+        panel.setFrame(f, display: true, animate: animate)
+        moving = false
+    }
+
     func scheduleSnap() {
         snapWork?.cancel()
         let w = DispatchWorkItem { [weak self] in self?.snap() }
@@ -277,24 +290,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func snap() {
+        guard shown else { return }
         guard NSEvent.pressedMouseButtons == 0 else { scheduleSnap(); return }
-        let vis = screen.visibleFrame
+        let s = screen, vis = s.visibleFrame
         var f = panel.frame
-        f.origin.x = onLeft ? vis.minX : vis.maxX - f.width
+        f.origin.x = f.midX < s.frame.midX ? vis.minX : vis.maxX - f.width
         f.origin.y = min(max(f.minY, vis.minY), vis.maxY - f.height)
-        panel.setFrame(f, display: true, animate: true)
+        home = f
+        move(to: f, animate: true)
         UserDefaults.standard.set(NSStringFromRect(f), forKey: "frame")
     }
 
     func detectDrag() {
         let c = NSPasteboard(name: .drag).changeCount
         if c != lastDrag { lastDrag = c; dragging = true; show() }
-    }
-
-    func inHotZone(_ m: NSPoint) -> Bool {
-        let s = screen.frame, f = panel.frame
-        let atEdge = onLeft ? m.x <= s.minX + 1 : m.x >= s.maxX - 2
-        return atEdge && m.y >= f.minY && m.y <= f.maxY
     }
 
     func tick() {
@@ -306,7 +315,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         if !shown {
-            if dragging || inHotZone(m) { show() }
+            // 삐져나온 탭 근처(위아래 40px 여유)에 마우스가 오면 펼침
+            if dragging || panel.frame.insetBy(dx: -4, dy: -40).contains(m) { show() }
         } else if dragging || pinned || panel.frame.insetBy(dx: -24, dy: -24).contains(m) {
             hideTicks = 0
         } else {
@@ -319,18 +329,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hideTicks = 0
         guard !shown else { return }
         shown = true
-        panel.alphaValue = 0
-        panel.orderFrontRegardless()
-        panel.animator().alphaValue = 1
+        move(to: home, animate: true)
     }
 
     func hide() {
         guard shown else { return }
         shown = false
-        NSAnimationContext.runAnimationGroup({ _ in panel.animator().alphaValue = 0 }) { [weak self] in
-            guard let self, !self.shown else { return }
-            self.panel.orderOut(nil)
-        }
+        var f = home
+        f.origin.x = onLeft ? screen.frame.minX + Self.peek - f.width : screen.frame.maxX - Self.peek
+        move(to: f, animate: true)
     }
 }
 
