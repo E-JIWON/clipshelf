@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import Quartz
 import SwiftUI
 
@@ -7,13 +8,26 @@ private final class KeyPanel: NSPanel {
     override var canBecomeKey: Bool { true }
 }
 
+/// 마우스가 패널 위에 들어오고 나가는 것만 알려주는 호스팅 뷰. 전역 마우스 감시 없이 이것만으로 숨김/펼침을 정한다.
+private final class TrackingHostingView<Content: View>: NSHostingView<Content> {
+    var onMouseEntered: (() -> Void)?
+    var onMouseExited: (() -> Void)?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.filter { $0.owner === self }.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
+    }
+
+    override func mouseEntered(with event: NSEvent) { super.mouseEntered(with: event); onMouseEntered?() }
+    override func mouseExited(with event: NSEvent) { super.mouseExited(with: event); onMouseExited?() }
+}
+
 /// 화면 가장자리에 붙어 있는 선반 패널. 숨김/펼침, 가장자리 스냅, 드래그 감지, 미리보기를 담당한다.
 final class ShelfPanel {
     private enum Layout {
-        static let peek: CGFloat = 8          // 숨었을 때 삐져나오는 폭
-        static let hoverMargin: CGFloat = 24  // 이 밖으로 나가면 숨김 카운트 시작
-        static let revealMargin: CGFloat = 40 // 탭 위아래로 이만큼까지 펼침 영역
-        static let hideDelayTicks = 5         // tick 0.1s × 5 = 0.5s
+        static let peek: CGFloat = 10 // 숨었을 때 삐져나오는 탭 폭. 여기에 마우스를 대면 펼쳐진다
+        static let hideDelay: TimeInterval = 0.5
     }
 
     let store: Store
@@ -25,8 +39,9 @@ final class ShelfPanel {
     private var isMovingProgrammatically = false
     private var isExternalDragActive = false
     private var lastDragChangeCount = NSPasteboard(name: .drag).changeCount
-    private var hideTicks = 0
+    private var hideWork: DispatchWorkItem?
     private var snapWork: DispatchWorkItem?
+    private var pinObserver: AnyCancellable?
 
     init(store: Store) {
         self.store = store
@@ -50,9 +65,17 @@ final class ShelfPanel {
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             self?.handleKeyDown(event)
         }
-        // ponytail: 10Hz 폴링으로 마우스 위치 감시
-        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            self?.tick()
+        // 외부 드래그가 끝나면(버튼 뗌) 마우스가 패널 밖일 때 숨김
+        NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] _ in
+            self?.isExternalDragActive = false
+            self?.scheduleHideIfMouseOutside()
+        }
+        NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { [weak self] _ in
+            self?.closePreviewIfClickedOutside()
+        }
+        pinObserver = store.$pinned.sink { [weak self] pinned in
+            self?.panel.isMovableByWindowBackground = !pinned
+            if pinned { self?.show() } else { self?.scheduleHideIfMouseOutside() }
         }
         installSnapshotHook()
     }
@@ -86,9 +109,12 @@ final class ShelfPanel {
         panel.isMovableByWindowBackground = true
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
-        panel.contentView = NSHostingView(rootView: ShelfView(store: store) { [weak self] url, view in
+        let hosting = TrackingHostingView(rootView: ShelfView(store: store) { [weak self] url, view in
             self?.showPreview(for: url, from: view)
         })
+        hosting.onMouseEntered = { [weak self] in self?.show() }
+        hosting.onMouseExited = { [weak self] in self?.scheduleHide() }
+        panel.contentView = hosting
     }
 
     private func defaultFrame() -> NSRect {
@@ -150,36 +176,43 @@ final class ShelfPanel {
         return nil
     }
 
-    private func tick() {
-        let mouse = NSEvent.mouseLocation
-        if isExternalDragActive, NSEvent.pressedMouseButtons == 0 { isExternalDragActive = false }
-        panel.isMovableByWindowBackground = !store.pinned
-        if store.pinned { show() }
+    private func scheduleHide() {
+        guard isShown, !store.pinned, !isExternalDragActive, !preview.isShown, hideWork == nil else { return }
+        let work = DispatchWorkItem { [weak self] in self?.hide() }
+        hideWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Layout.hideDelay, execute: work)
+    }
 
-        if preview.isShown {
-            let inPreview = preview.contentViewController?.view.window?.frame.contains(mouse) ?? false
-            if NSEvent.pressedMouseButtons != 0, !inPreview, !panel.frame.contains(mouse) { preview.close() }
-            return
-        }
-        if !isShown {
-            if isExternalDragActive || panel.frame.insetBy(dx: -4, dy: -Layout.revealMargin).contains(mouse) { show() }
-        } else if isExternalDragActive || store.pinned || panel.frame.insetBy(dx: -Layout.hoverMargin, dy: -Layout.hoverMargin).contains(mouse) {
-            hideTicks = 0
-        } else {
-            hideTicks += 1
-            if hideTicks > Layout.hideDelayTicks { hide() }
+    private func scheduleHideIfMouseOutside() {
+        if !panel.frame.contains(NSEvent.mouseLocation) { scheduleHide() }
+    }
+
+    private func closePreviewIfClickedOutside() {
+        guard preview.isShown else { return }
+        let mouse = NSEvent.mouseLocation
+        let inPreview = preview.contentViewController?.view.window?.frame.contains(mouse) ?? false
+        if !inPreview, !panel.frame.contains(mouse) {
+            preview.close()
+            scheduleHideIfMouseOutside()
         }
     }
 
+    private func cancelHide() {
+        hideWork?.cancel()
+        hideWork = nil
+    }
+
     private func show() {
-        hideTicks = 0
+        cancelHide()
         guard !isShown else { return }
         isShown = true
         move(to: home, animate: true)
     }
 
     private func hide() {
-        guard isShown else { return }
+        hideWork = nil
+        guard isShown, !store.pinned, !isExternalDragActive, !preview.isShown else { return }
+        guard NSEvent.pressedMouseButtons == 0 else { scheduleHide(); return } // 패널을 끌어 옮기는 중
         isShown = false
         var frame = home
         frame.origin.x = isOnLeft ? screen.frame.minX + Layout.peek - frame.width : screen.frame.maxX - Layout.peek

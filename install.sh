@@ -1,5 +1,5 @@
 #!/bin/zsh
-# 릴리즈 빌드 → Shelf.app 번들 → /Applications 설치 → 로그인 시 자동 실행
+# 릴리즈 빌드 → Shelf.app 번들 → /Applications 설치
 set -e
 cd "$(dirname "$0")"
 swift build -c release
@@ -26,18 +26,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 codesign --force --sign - "$APP"
 
-# 로그인 시 실행 (시스템 설정 > 일반 > 로그인 항목에 "백그라운드 항목"으로 보임)
+# 예전 방식(LaunchAgent) 정리. 로그인 실행은 이제 메뉴바 > "로그인 시 실행"
 AGENT=~/Library/LaunchAgents/com.bongchil.shelf.plist
-mkdir -p ~/Library/LaunchAgents
-cat > "$AGENT" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>Label</key><string>com.bongchil.shelf</string>
-  <key>ProgramArguments</key><array><string>$APP/Contents/MacOS/Shelf</string></array>
-  <key>RunAtLoad</key><true/>
-</dict></plist>
-PLIST
-launchctl bootout gui/$UID "$AGENT" 2>/dev/null || true
-launchctl bootstrap gui/$UID "$AGENT"
-echo "설치 완료: $APP (로그인 시 자동 실행)"
+if [ -f "$AGENT" ]; then launchctl bootout gui/$UID "$AGENT" 2>/dev/null || true; rm -f "$AGENT"; fi
+
+open "$APP"
+echo "설치 완료: $APP"

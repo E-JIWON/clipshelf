@@ -1,45 +1,84 @@
-# Shelf (선반)
+<p align="center">
+  <img src="docs/screenshot.png" width="140" alt="Shelf panel">
+</p>
 
-macOS 화면 가장자리에 붙어 있는 임시 보관 선반. 캡처 썸네일·텍스트·파일을 끌어다 놓거나 ⌘V로 올려두고, 필요할 때 끌어서 꺼내 쓴다. [Yoink](https://eternalstorms.at/yoink/mac)의 핵심만 남긴 무료 버전.
+<h1 align="center">Shelf</h1>
 
-<img src="docs/screenshot.png" width="160" alt="선반 패널">
+<p align="center">
+  A tiny drop zone that lives on the edge of your Mac screen.<br>
+  Drag things in, grab them later. Free, open source, no account.
+</p>
 
-## 동작
+<p align="center">
+  <a href="README.ko.md">한국어</a> ·
+  <a href="https://github.com/E-JIWON/shelf/releases/latest">Download</a>
+</p>
 
-- **넣기**: 패널로 드래그 앤 드롭, 또는 패널 클릭 후 ⌘V. 메뉴바 아이콘에서도 "클립보드에서 추가".
-- **꺼내기**: 카드를 다른 앱으로 드래그. 이미지는 파일 URL + 이미지 데이터, 텍스트는 문자열로 전달.
-- **미리보기/편집**: 카드 클릭. 이미지는 Quick Look, 텍스트는 바로 편집(자동 저장).
-- **숨김**: 평소엔 8px 탭만 남기고 가장자리로 들어가 있다가, 탭에 마우스를 대거나 어디서든 드래그가 시작되면 펼쳐진다.
-- **위치**: 패널을 끌어다 놓으면 가까운 좌/우 가장자리에 스냅되고 기억된다. 우하단 핀을 켜면 위치 잠금 + 항상 열림.
+---
 
-## 구조
+You take a screenshot, and now you need it in three places. You copy a snippet, then copy something else and lose it. Shelf is the in‑between spot: a small glass panel tucked into the screen edge that holds whatever you throw at it until you're done.
 
-```
-Sources/Shelf/
-  ShelfApp.swift        SwiftUI App 진입점 (MenuBarExtra), AppDelegate
-  ShelfPanel.swift      패널 생명주기: 숨김/펼침, 가장자리 스냅, 외부 드래그 감지, 미리보기 팝오버
-  Store.swift           데이터 = 캐시 폴더. 파일 하나가 아이템 하나 (.txt는 텍스트)
-  Views/
-    ShelfView.swift     패널 본체, 드롭 타깃, 토스트, 핀
-    Card.swift          아이템 카드 (썸네일/텍스트/파일)
-    DragHandle.swift    AppKit 드래그 세션 + 호버/클릭 (SwiftUI onDrag가 file-url을 못 실어서)
-    TextEditView.swift  텍스트 편집 팝오버
-Tests/ShelfTests/       Store 단위 테스트
-install.sh              릴리즈 빌드 → .app 번들 → /Applications → 로그인 시 자동 실행
-```
+## What it does
 
-설계상 선택:
-- 서버·DB·설정 파일 없음. 저장소는 `~/Library/Caches/Shelf/` 폴더 그 자체. 파일명이 생성 시각이라 정렬에 메타데이터가 필요 없다.
-- 폴더를 `DispatchSource`로 감시해서 바깥에서 파일이 바뀌어도 목록이 맞춰진다.
-- 외부 드래그 감지는 Yoink 방식: 드래그 페이스트보드의 `changeCount` 변화를 글로벌 마우스 모니터에서 확인.
+- **Drop anything** — screenshot thumbnails, images, text selections, files. Or click the panel and press ⌘V.
+- **Drag it back out** — into Finder, Slack, Notion, Figma, anywhere. Images go as real files, text as text.
+- **Peek without leaving** — click a card for Quick Look. Text cards open as an editor and save as you type.
+- **Stays out of the way** — hides to a 10px tab at the edge. Hover the tab, or start dragging anything anywhere, and it slides out.
+- **Lives where you put it** — drag the panel to either side of the screen and it snaps and remembers. Pin it to keep it open.
+- **Nothing to configure** — no accounts, no sync, no settings window. Items are plain files in `~/Library/Caches/Shelf`.
 
-## 개발
+## Install
+
+**Download** (macOS 14 Sonoma or later, Apple Silicon and Intel)
+
+1. Grab `Shelf.zip` from the [latest release](https://github.com/E-JIWON/shelf/releases/latest) and unzip it.
+2. Move `Shelf.app` to `/Applications` and open it.
+3. macOS will say the app is from an unidentified developer (it isn't notarized). Either go to **System Settings → Privacy & Security** and click **Open Anyway**, or run once:
+   ```bash
+   xattr -cr /Applications/Shelf.app
+   ```
+4. A tray icon appears in the menu bar. Turn on **Launch at Login** there if you want it to come back after a restart.
+
+**Build from source**
 
 ```bash
-swift run            # 개발 실행
-swift test           # Store 테스트
-./install.sh         # 설치 + 로그인 항목 등록
-kill -USR1 $(pgrep -x Shelf)   # 패널을 ~/Library/Caches/Shelf-snapshot.png 로 저장 (UI 점검용)
+git clone https://github.com/E-JIWON/shelf.git
+cd shelf
+./install.sh      # release build → Shelf.app → /Applications
 ```
 
-요구사항: macOS 14+, Xcode 15+.
+Requires Xcode 15+ (or the Command Line Tools with Swift 5.9).
+
+## How it works
+
+| Piece | What it does |
+|---|---|
+| `ShelfApp.swift` | SwiftUI `App` entry with a `MenuBarExtra`. No Dock icon. |
+| `ShelfPanel.swift` | A non‑activating `NSPanel`. Edge snapping, hide/reveal, external drag detection, Quick Look popover. |
+| `Store.swift` | The data layer is a folder. One file per item; `.txt` means text. A `DispatchSource` watches it so changes from outside show up. |
+| `Views/DragHandle.swift` | AppKit drag session over each card. SwiftUI's `onDrag` doesn't put `public.file-url` on the pasteboard, so other apps wouldn't accept drops. |
+| `Views/` | `ShelfView`, `Card`, `TextEditView` — the SwiftUI layer. |
+
+Two details worth knowing:
+
+- **Reveal on drag** uses the same trick as Yoink: a global `leftMouseDragged` monitor checks whether the drag pasteboard's `changeCount` moved. If it did, someone started dragging something, and the shelf slides out to catch it.
+- **Idle cost is zero.** Hide/reveal is driven by `NSTrackingArea` on the panel itself, not by polling or global mouse‑moved monitoring. When your mouse is elsewhere, the process doesn't wake up.
+
+## Development
+
+```bash
+swift run          # run the dev build
+swift test         # Store unit tests
+./install.sh       # install to /Applications
+kill -USR1 $(pgrep -x Shelf)   # dump the panel to ~/Library/Caches/Shelf-snapshot.png
+```
+
+## Why not just use …
+
+- **Yoink** — great, and the inspiration. Paid, and more than I needed.
+- **Universal Clipboard / Paste** — clipboard history, not a shelf. One item at a time, nothing to drag.
+- **Dropover** — closer, but Shelf is a fixed spot on the edge rather than a window that follows your drag.
+
+## License
+
+MIT
