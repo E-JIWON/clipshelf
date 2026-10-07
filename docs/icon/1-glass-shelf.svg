@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34373f"/><stop offset="1" stop-color="#15161a"/></linearGradient>
+    <linearGradient id="photo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6ea0ff"/><stop offset="1" stop-color="#3b5fd9"/></linearGradient>
+    <clipPath id="c"><rect x="100" y="100" width="824" height="824" rx="184"/></clipPath>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="url(#bg)"/>
+  <g clip-path="url(#c)">
+    <!-- items -->
+    <rect x="286" y="430" width="220" height="176" rx="26" fill="url(#photo)"/>
+    <circle cx="340" cy="482" r="22" fill="#fff" opacity=".9"/>
+    <path d="M300 590 L380 500 L440 560 L470 530 L506 575 L506 606 L300 606Z" fill="#fff" opacity=".35"/>
+    <rect x="532" y="430" width="206" height="176" rx="26" fill="#f6f2ea"/>
+    <rect x="566" y="474" width="138" height="16" rx="8" fill="#b9b2a6"/>
+    <rect x="566" y="512" width="106" height="16" rx="8" fill="#b9b2a6"/>
+    <rect x="566" y="550" width="122" height="16" rx="8" fill="#b9b2a6"/>
+    <!-- contact shadow -->
+    <ellipse cx="512" cy="618" rx="250" ry="14" fill="#000" opacity=".45"/>
+    <!-- shelf -->
+    <rect x="236" y="606" width="552" height="30" rx="15" fill="#ffffff" opacity=".16"/>
+    <rect x="236" y="606" width="552" height="4" rx="2" fill="#ffffff" opacity=".45"/>
+  </g>
+</svg>

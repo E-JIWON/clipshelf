@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8fb4ff"/><stop offset="1" stop-color="#4466f2"/></linearGradient>
+    <clipPath id="c"><rect x="100" y="100" width="824" height="824" rx="184"/></clipPath>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="url(#bg)"/>
+  <g clip-path="url(#c)">
+    <!-- panel peeking from left edge -->
+    <rect x="-40" y="212" width="520" height="600" rx="72" fill="#ffffff" opacity=".22"/>
+    <rect x="-40" y="212" width="520" height="600" rx="72" fill="none" stroke="#ffffff" stroke-opacity=".5" stroke-width="4"/>
+    <!-- cards inside -->
+    <rect x="150" y="276" width="270" height="184" rx="30" fill="#ffffff" opacity=".92"/>
+    <circle cx="206" cy="332" r="20" fill="#4466f2" opacity=".8"/>
+    <path d="M166 436 L246 352 L306 412 L336 382 L420 460 L166 460Z" fill="#4466f2" opacity=".35"/>
+    <rect x="150" y="492" width="270" height="130" rx="30" fill="#ffffff" opacity=".7"/>
+    <rect x="186" y="528" width="160" height="14" rx="7" fill="#4466f2" opacity=".5"/>
+    <rect x="186" y="566" width="120" height="14" rx="7" fill="#4466f2" opacity=".5"/>
+    <rect x="150" y="654" width="270" height="110" rx="30" fill="#ffffff" opacity=".45"/>
+  </g>
+</svg>

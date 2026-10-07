@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd36e"/><stop offset="1" stop-color="#ff8a4c"/></linearGradient>
+    <linearGradient id="photo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7fb3ff"/><stop offset="1" stop-color="#4b6fe8"/></linearGradient>
+    <clipPath id="c"><rect x="100" y="100" width="824" height="824" rx="184"/></clipPath>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="url(#bg)"/>
+  <g clip-path="url(#c)">
+    <g transform="rotate(-12 512 540)"><rect x="312" y="370" width="400" height="300" rx="40" fill="#fff" opacity=".55"/></g>
+    <g transform="rotate(-4 512 540)">
+      <rect x="312" y="370" width="400" height="300" rx="40" fill="#fff" opacity=".85"/>
+      <rect x="360" y="430" width="240" height="22" rx="11" fill="#c9a071" opacity=".6"/>
+      <rect x="360" y="482" width="300" height="22" rx="11" fill="#c9a071" opacity=".6"/>
+      <rect x="360" y="534" width="200" height="22" rx="11" fill="#c9a071" opacity=".6"/>
+    </g>
+    <g transform="rotate(7 512 540)">
+      <rect x="312" y="370" width="400" height="300" rx="40" fill="#fff"/>
+      <rect x="340" y="398" width="344" height="244" rx="28" fill="url(#photo)"/>
+      <circle cx="420" cy="470" r="30" fill="#fff" opacity=".9"/>
+      <path d="M340 630 L470 500 L560 590 L610 540 L684 620 L684 642 L340 642Z" fill="#fff" opacity=".4"/>
+    </g>
+  </g>
+</svg>
