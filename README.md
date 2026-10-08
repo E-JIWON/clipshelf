@@ -45,7 +45,7 @@ You take a screenshot, and now you need it in three places. You copy a snippet, 
 brew install --cask e-jiwon/tap/clipshelf
 ```
 
-The app isn't notarized yet, so if macOS blocks the first launch run `xattr -cr /Applications/ClipShelf.app` once, or install with `--no-quarantine`.
+The app isn't notarized yet, so if macOS blocks the first launch run `xattr -cr /Applications/ClipShelf.app` once.
 
 **Download** (macOS 14 Sonoma or later, Apple Silicon and Intel)
 
