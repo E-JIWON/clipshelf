@@ -12,7 +12,7 @@
 <p align="center">
   <a href="README.md"><img src="https://img.shields.io/badge/English-README.md-blue?style=flat-square" alt="English"></a>
   <a href="README.ko.md"><img src="https://img.shields.io/badge/한국어-현재-111?style=flat-square" alt="한국어"></a>
-  <a href="https://github.com/E-JIWON/clipshelf/releases/latest"><img src="https://img.shields.io/github/v/release/E-JIWON/clipshelf?style=flat-square&label=다운로드&color=2ea043" alt="다운로드"></a>
+  <a href="https://github.com/E-JIWON/clipshelf/releases/latest"><img src="https://img.shields.io/github/v/release/E-JIWON/clipshelf?style=flat-square&label=%EB%8B%A4%EC%9A%B4%EB%A1%9C%EB%93%9C&color=2ea043" alt="다운로드"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-lightgrey?style=flat-square" alt="macOS 14+">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/E-JIWON/clipshelf?style=flat-square&color=2ea043" alt="MIT License"></a>
 </p>
