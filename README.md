@@ -15,6 +15,7 @@
   <a href="https://github.com/E-JIWON/clipshelf/releases/latest"><img src="https://img.shields.io/github/v/release/E-JIWON/clipshelf?style=flat-square&label=Download&color=2ea043" alt="Download"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-lightgrey?style=flat-square" alt="macOS 14+">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/E-JIWON/clipshelf?style=flat-square&color=2ea043" alt="MIT License"></a>
+  <a href="https://github.com/E-JIWON/homebrew-tap"><img src="https://img.shields.io/badge/Homebrew-brew%20install%20--cask%20e--jiwon%2Ftap%2Fclipshelf-f5a623?style=flat-square&logo=homebrew&logoColor=white" alt="Homebrew"></a>
 </p>
 
 <p align="center">
@@ -37,6 +38,14 @@ You take a screenshot, and now you need it in three places. You copy a snippet, 
 - **Nothing to configure** — no accounts, no sync, no settings window. Items are plain files in `~/Library/Caches/ClipShelf`.
 
 ## Install
+
+**Homebrew**
+
+```bash
+brew install --cask e-jiwon/tap/clipshelf
+```
+
+The app isn't notarized yet, so if macOS blocks the first launch run `xattr -cr /Applications/ClipShelf.app` once, or install with `--no-quarantine`.
 
 **Download** (macOS 14 Sonoma or later, Apple Silicon and Intel)
 

@@ -15,6 +15,7 @@
   <a href="https://github.com/E-JIWON/clipshelf/releases/latest"><img src="https://img.shields.io/github/v/release/E-JIWON/clipshelf?style=flat-square&label=%EB%8B%A4%EC%9A%B4%EB%A1%9C%EB%93%9C&color=2ea043" alt="다운로드"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-lightgrey?style=flat-square" alt="macOS 14+">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/E-JIWON/clipshelf?style=flat-square&color=2ea043" alt="MIT License"></a>
+  <a href="https://github.com/E-JIWON/homebrew-tap"><img src="https://img.shields.io/badge/Homebrew-brew%20install%20--cask%20e--jiwon%2Ftap%2Fclipshelf-f5a623?style=flat-square&logo=homebrew&logoColor=white" alt="Homebrew로 설치"></a>
 </p>
 
 <p align="center">
@@ -37,6 +38,14 @@
 - **설정할 게 없음** — 계정, 동기화, 설정창 없음. 아이템은 `~/Library/Caches/ClipShelf` 폴더의 그냥 파일.
 
 ## 설치
+
+**Homebrew**
+
+```bash
+brew install --cask e-jiwon/tap/clipshelf
+```
+
+아직 공증을 안 받아서 첫 실행이 막히면 `xattr -cr /Applications/ClipShelf.app` 한 번, 또는 `--no-quarantine` 옵션으로 설치.
 
 **다운로드** (macOS 14 Sonoma 이상, Apple Silicon·Intel)
 
