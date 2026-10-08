@@ -45,7 +45,7 @@
 brew install --cask e-jiwon/tap/clipshelf
 ```
 
-아직 공증을 안 받아서 첫 실행이 막히면 `xattr -cr /Applications/ClipShelf.app` 한 번, 또는 `--no-quarantine` 옵션으로 설치.
+아직 공증을 안 받아서 첫 실행이 막히면 `xattr -cr /Applications/ClipShelf.app` 한 번 실행.
 
 **다운로드** (macOS 14 Sonoma 이상, Apple Silicon·Intel)
 
