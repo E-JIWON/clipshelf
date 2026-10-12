@@ -15,7 +15,7 @@
   <a href="https://github.com/E-JIWON/clipshelf/releases/latest"><img src="https://img.shields.io/github/v/release/E-JIWON/clipshelf?style=flat-square&label=Download&color=2ea043" alt="Download"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-lightgrey?style=flat-square" alt="macOS 14+">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/E-JIWON/clipshelf?style=flat-square&color=2ea043" alt="MIT License"></a>
-  <a href="https://github.com/E-JIWON/homebrew-tap"><img src="https://img.shields.io/badge/Homebrew-brew%20install%20--cask%20e--jiwon%2Ftap%2Fclipshelf-f5a623?style=flat-square&logo=homebrew&logoColor=white" alt="Homebrew"></a>
+  <a href="https://github.com/E-JIWON/homebrew-tap"><img src="https://img.shields.io/badge/Homebrew-brew%20install%20----cask%20e--jiwon%2Ftap%2Fclipshelf-f5a623?style=flat-square&logo=homebrew&logoColor=white" alt="Homebrew"></a>
 </p>
 
 <p align="center">
